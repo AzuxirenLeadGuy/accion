@@ -1,0 +1,8 @@
+bin/
+.vscode/
+.task/
+.cache/
+*.env
+.clang-format
+compile_flags.txt
+compile_commands.json
