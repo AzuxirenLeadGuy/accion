@@ -3,50 +3,53 @@
 #include <stdint.h>
 #include <stdio.h>
 
-void cycle_color(Color *cd) {
-	Color c = *cd;
-	if (c.a == 255) {
-		c.b--;
-		if (c.b == 0) {
-			c.a = 254;
+const uint8_t cmax = 255;
+
+void cycle_color(Color *color_p) {
+	Color color_v = *color_p;
+	if (color_v.a == cmax) {
+		color_v.b--;
+		if (color_v.b == 0) {
+			color_v.a = cmax - 1;
 		}
 
-	} else if (c.a == 254) {
-		c.g--;
-		if (c.g == 0) {
-			c.a = 253;
+	} else if (color_v.a == cmax - 1) {
+		color_v.g--;
+		if (color_v.g == 0) {
+			color_v.a = cmax - 2;
 		}
 
-	} else if (c.a == 253) {
-		c.b++;
-		if (c.b == 255) {
-			c.a = 252;
+	} else if (color_v.a == cmax - 2) {
+		color_v.b++;
+		if (color_v.b == cmax) {
+			color_v.a = cmax - 3;
 		}
 
-	} else if (c.a == 252) {
-		c.r--;
-		if (c.r == 0) {
-			c.a = 251;
+	} else if (color_v.a == cmax - 3) {
+		color_v.r--;
+		if (color_v.r == 0) {
+			color_v.a = cmax - 4;
 		}
 
-	} else if (c.a == 251) {
-		c.g++;
-		if (c.g == 255) {
-			c.a = 250;
+	} else if (color_v.a == cmax - 4) {
+		color_v.g++;
+		if (color_v.g == cmax) {
+			color_v.a = cmax - 4 - 1;
 		}
-	} else if (c.a == 250) {
-		c.r++;
-		if (c.r == 255) {
-			c.a = 255;
+	} else if (color_v.a == cmax - 4 - 1) {
+		color_v.r++;
+		if (color_v.r == cmax) {
+			color_v.a = cmax;
 		}
 	}
-	*cd = c;
+	*color_p = color_v;
 }
 
 int main(void) {
 
 	const int unit = 48;
-	galton_board_t *board = galton_board__init(5, 255, unit, unit);
+	galton_board_t *board =
+		galton_board__init(4 + 1, cmax, unit, unit);
 
 	if (board == 0) {
 		return -1;
@@ -61,28 +64,30 @@ int main(void) {
 		galton_constants.screen_height,
 		"Raylib project: accion");
 
-	SetTargetFPS(60);
+	SetTargetFPS(4 * 3 * 2 * (4 + 1));
 
-	Color c = {255, 255, 255, 255};
+	Color back_color = {cmax / 2, cmax / 2, cmax / 2, cmax};
 
 	const point2d_t particle_spawn_point = {
-		galton_constants.screen_width / 2,
-		galton_constants.screen_height / 20};
+		(int16_t)(galton_constants.screen_width / 2),
+		(int16_t)(galton_constants.screen_height / 20)};
 
 	const point2d_t funnel_origin = {
-		particle_spawn_point.x, particle_spawn_point.y / 2};
+		(int16_t)(particle_spawn_point.x),
+		(int16_t)(particle_spawn_point.y / 2)};
 
 	// DrawPoly(center, 3, 3, 0, RED);
 	const float reset_timer_value =
-		galton_constants.particle_spawn_milliseconds / 1000.0f;
+		(float)galton_constants.particle_spawn_milliseconds / 1000.0F;
 	float current_timer = 1;
 
 	const uint16_t ball_batch_size =
 		1 << galton_constants.particle_batch_size_2_power;
-	uint32_t i;
-	uint32_t batch_remaining = ball_batch_size, max_this_instance;
+	uint32_t idx;
+	uint32_t batch_remaining = ball_batch_size;
+	uint32_t max_this_instance;
 
-	char remain_text[128];
+	char remain_text[cmax / 2];
 
 	while (!WindowShouldClose()) {
 
@@ -105,7 +110,7 @@ int main(void) {
 		} else if (state == 1) {
 			// batch_remaining == 0, active_particles > 0
 			if (board->active_particles == 0) {
-				current_timer = reset_timer_value * 8;
+				current_timer = reset_timer_value * 4 + 4;
 				state = 2;
 			}
 
@@ -123,78 +128,86 @@ int main(void) {
 			break;
 		}
 		max_this_instance = 0;
-		for (i = 0; i < board->result_stack_size; i++) {
-			if (board->result_stack[i] > max_this_instance) {
-				max_this_instance = board->result_stack[i];
+		for (idx = 0; idx < board->result_stack_size; idx++) {
+			if (board->result_stack[idx] > max_this_instance) {
+				max_this_instance =
+					(uint32_t)(board->result_stack[idx]);
 			}
 		}
 		sprintf(remain_text, "Remaining: %d", batch_remaining);
-		ClearBackground(WHITE);
+		ClearBackground((Color){cmax / 2, cmax / 2, cmax / 2, cmax});
 		BeginDrawing();
 
 		// Draw title
-		DrawText("Galton Board", 0, 0, unit, c);
+		DrawText("Galton Board", 0, 0, unit, back_color);
 		DrawText(
-			remain_text,
-			funnel_origin.x + unit,
-			0,
-			unit / 2.0,
-			BLACK);
+			remain_text, funnel_origin.x + unit, 0, unit / 2, BLACK);
 
 		// Draw funnel
-		Vector2 pt = {funnel_origin.x, funnel_origin.y};
-		DrawPoly(pt, 3, unit / 2.0, 90, YELLOW);
+		Vector2 point_v = {funnel_origin.x, funnel_origin.y};
+		const float right_angle = 90;
+		const float halver = 0.5F;
+		DrawPoly(
+			point_v, 3, (float)unit * halver, right_angle, WHITE);
 
 		// Draw particles
-		for (i = 0; i < board->active_particles; i++) {
-			Vector2 pt = (Vector2){
+		for (idx = 0; idx < board->active_particles; idx++) {
+			Vector2 point_u = (Vector2){
 				particle_spawn_point.x, particle_spawn_point.y};
-			return_error =
-				galton_board__plot_ball(board, i, &pt.x, &pt.y);
+			return_error = galton_board__plot_ball(
+				board, (uint8_t)idx, &point_u.x, &point_u.y);
 			if (return_error != 0) {
 				CloseWindow();
 				break;
 			}
 
-			DrawCircle(pt.x, pt.y, unit / 4.0, RED);
+			DrawCircle(
+				(int)point_u.x,
+				(int)point_u.y,
+				(float)unit * halver * halver,
+				RED);
 		}
 
 		// Draw each bouncer
-		float unit_bc = unit / 4.0;
-		for (i = 0; i < board->bouncer_center_size; i++) {
-			pt.x =
-				particle_spawn_point.x + board->bouncer_center[i].x;
-			pt.y = particle_spawn_point.y +
-				   board->bouncer_center[i].y + unit_bc / 2;
-			DrawPoly(pt, 3, unit_bc, -90, GRAY);
+		float unit_bc = (float)unit * halver * halver;
+		for (idx = 0; idx < board->bouncer_center_size; idx++) {
+			point_v.x = (float)particle_spawn_point.x +
+						(float)board->bouncer_center[idx].x;
+			point_v.y = (float)particle_spawn_point.y +
+						(float)board->bouncer_center[idx].y +
+						unit_bc / 2;
+			DrawPoly(point_v, 3, unit_bc, -right_angle, BLACK);
 		}
 
-		for (i = 0; i < board->result_stack_size; i++) {
-			Vector2 pt = (Vector2){
+		for (idx = 0; idx < board->result_stack_size; idx++) {
+			Vector2 point_v = (Vector2){
 				particle_spawn_point.x, particle_spawn_point.y};
 			return_error = galton_board__plot_result_stack(
-				board, i, &pt.x, &pt.y);
-			float bar_length = board->result_stack[i],
-				  width = unit / 2.5;
-			bar_length /= max_this_instance;
-			bar_length *= galton_constants.screen_height - pt.y;
-			pt.x -= width / 2;
+				board, (int16_t)idx, &point_v.x, &point_v.y);
+			float bar_length = (float)board->result_stack[idx];
+			float width = (float)unit * halver;
+			bar_length /= (float)max_this_instance;
+			bar_length *=
+				(float)galton_constants.screen_height - point_v.y;
+			point_v.x -= width / 2;
 			DrawRectangleV(
-				pt, (Vector2){.x = width, .y = bar_length}, GREEN);
+				point_v,
+				(Vector2){.x = width, .y = bar_length},
+				GREEN);
 
 			if (state != 0) {
-				sprintf(remain_text, "%lu", board->result_stack[i]);
+				sprintf(remain_text, "%lu", board->result_stack[idx]);
 				DrawText(
 					remain_text,
-					pt.x,
-					pt.y,
-					unit / 1.5,
-					(Color){128, 0, 64, 255});
+					(int)point_v.x,
+					(int)point_v.y,
+					(int)(unit / 2),
+					(Color){cmax / 2, 0, 1 << (3 + 3), cmax});
 			}
 		}
 
 		EndDrawing();
-		cycle_color(&c);
+		cycle_color(&back_color);
 	}
 	return_error += galton_board__free(board);
 	printf("Returned with error %d\n\n", return_error);
