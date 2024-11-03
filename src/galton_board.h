@@ -61,10 +61,10 @@ typedef struct {
  * successful, otherwise returns null(0)
  */
 galton_board_t *galton_board__init(
-	const uint8_t bounce_pairs,
-	const uint8_t max_particles,
-	const uint8_t Hc,
-	const uint8_t Wc);
+	uint8_t bounce_pairs,
+	uint8_t max_particles,
+	uint8_t H_c,
+	uint8_t W_c);
 
 /**
  * @brief Resets the count for the galton board
@@ -107,7 +107,7 @@ error_t galton_board__update(galton_board_t *board);
  * positive integer in case of an error.
  */
 error_t galton_board__plot_ball(
-	const galton_board_t *board, uint8_t idx, float *x, float *y);
+	const galton_board_t *board, uint8_t idx, float *x_f, float *y_f);
 
 /**
  * @brief Gets the final point of the galton result box, provided
@@ -123,7 +123,7 @@ error_t galton_board__plot_ball(
  * positive integer in case of an error.
  */
 error_t galton_board__plot_result_stack(
-	const galton_board_t *board, int16_t idx, float *x, float *y);
+	const galton_board_t *board, int16_t idx, float *x_f, float *y_f);
 
 /**
  * @brief De-allocate all memory resources held by this instance
