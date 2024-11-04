@@ -9,7 +9,7 @@
 const struct galton_constants galton_constants = {
 	.max_particles_limit = 255,
 	.max_bouncer_pairs = 11,
-	.particle_speed = 12,
+	.particle_speed = 16,
 	.screen_width = 1200,
 	.screen_height = 900,
 	.particle_spawn_milliseconds = 300,
@@ -19,9 +19,9 @@ const struct galton_constants galton_constants = {
 point2d_t get_position_base(
 	const int16_t slot,
 	const uint16_t depth,
-	const uint16_t Ch,
-	const uint16_t Cw) {
-	return (point2d_t){.x = (slot * Cw) >> 1, .y = depth * Ch};
+	const uint16_t C_h,
+	const uint16_t C_w) {
+	return (point2d_t){.x = (slot * C_w) >> 1, .y = depth * C_h};
 }
 
 /**
@@ -42,22 +42,22 @@ point2d_t get_position_base(
  * positive value is returned.
  */
 error_t get_position(
-	float *x,
-	float *y,
+	float *x_f,
+	float *y_f,
 	const int16_t slot,
 	const uint16_t depth,
-	const uint16_t Ch,
-	const uint16_t Cw,
+	const uint16_t C_h,
+	const uint16_t C_w,
 	const int8_t prev_dir,
 	float progress) {
 	if (progress < 0 || progress > 1) {
 		return 5;
 	}
-	point2d_t base = get_position_base(slot, depth, Ch, Cw);
-	*y += base.y;
-	*x += base.x;
-	*y -= progress * Ch;
-	*x -= prev_dir * progress * progress * Cw / 2;
+	point2d_t base = get_position_base(slot, depth, C_h, C_w);
+	*y_f += base.y;
+	*x_f += base.x;
+	*y_f -= progress * C_h;
+	*x_f -= prev_dir * progress * progress * C_w / 2;
 	return 0;
 }
 
