@@ -47,7 +47,7 @@ void cycle_color(Color *color_p) {
 
 int main(void) {
 
-	const int unit = 48;
+	const uint8_t unit = 48;
 	galton_board_t *board =
 		galton_board__init(4 + 1, cmax, unit, unit);
 
@@ -82,7 +82,7 @@ int main(void) {
 	float current_timer = 1;
 
 	const uint16_t ball_batch_size =
-		1 << galton_constants.particle_batch_size_2_power;
+		(uint16_t)(1 << galton_constants.particle_batch_size_2_power);
 	uint32_t idx;
 	uint32_t batch_remaining = ball_batch_size;
 	uint32_t max_this_instance;
@@ -135,7 +135,7 @@ int main(void) {
 			}
 		}
 		sprintf(remain_text, "Remaining: %d", batch_remaining);
-		ClearBackground((Color){cmax / 2, cmax / 2, cmax / 2, cmax});
+		ClearBackground((Color){cmax, cmax, cmax, cmax});
 		BeginDrawing();
 
 		// Draw title
