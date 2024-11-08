@@ -107,7 +107,10 @@ error_t galton_board__update(galton_board_t *board);
  * positive integer in case of an error.
  */
 error_t galton_board__plot_ball(
-	const galton_board_t *board, uint8_t idx, float *x_f, float *y_f);
+	const galton_board_t *board,
+	uint8_t idx,
+	float *ball_x,
+	float *ball_y);
 
 /**
  * @brief Gets the final point of the galton result box, provided
@@ -123,7 +126,7 @@ error_t galton_board__plot_ball(
  * positive integer in case of an error.
  */
 error_t galton_board__plot_result_stack(
-	const galton_board_t *board, int16_t idx, float *x_f, float *y_f);
+	const galton_board_t *board, int16_t idx, float *p_x, float *p_y);
 
 /**
  * @brief De-allocate all memory resources held by this instance
