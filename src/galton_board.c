@@ -68,57 +68,61 @@ galton_board_t *galton_board__init(
 	const uint8_t Wc) {
 	if (bounce_pairs > galton_constants.max_bouncer_pairs) {
 		return 0;
-	} else if (max_particles > galton_constants.max_particles_limit) {
-		return 0;
-	} else if (Hc == 0 || Wc == 0) {
+	}
+	if (max_particles > galton_constants.max_particles_limit) {
 		return 0;
 	}
-	srand(time(0));
-	galton_board_t *bd =
+	if (H_c == 0 || W_c == 0) {
+		return 0;
+	}
+	srand((uint32_t)time(0));
+	galton_board_t *bounds =
 		(galton_board_t *)malloc(sizeof(galton_board_t));
-	bd->active_particles = 0;
+	bounds->active_particles = 0;
 
-	ASSIGN_CONST(bd->max_particles, uint8_t, max_particles);
-	uint16_t px = 1 + (2 * bounce_pairs);
-	ASSIGN_CONST(bd->result_stack_size, uint16_t, px);
+	ASSIGN_CONST(bounds->max_particles, uint8_t, max_particles);
+	uint16_t pos_x = 1 + (2 * bounce_pairs);
+	ASSIGN_CONST(bounds->result_stack_size, uint16_t, pos_x);
 	ASSIGN_CONST(
-		bd->bouncer_center_size, uint16_t, px * bounce_pairs);
-	ASSIGN_CONST(bd->Ch, uint8_t, Hc);
-	ASSIGN_CONST(bd->Cw, uint8_t, Wc);
+		bounds->bouncer_center_size, uint16_t, pos_x * bounce_pairs);
+	ASSIGN_CONST(bounds->Ch, uint8_t, H_c);
+	ASSIGN_CONST(bounds->Cw, uint8_t, W_c);
 	ASSIGN_CONST(
-		bd->particle_dist_limit,
+		bounds->particle_dist_limit,
 		uint16_t,
 		galton_constants.particle_process_limit);
 
-	bd->particles = ALLOC_ARRAY(galton_particle_t, max_particles);
+	bounds->particles = ALLOC_ARRAY(galton_particle_t, max_particles);
 
-	bd->result_stack = ALLOC_ARRAY(uint64_t, bd->result_stack_size);
+	bounds->result_stack =
+		ALLOC_ARRAY(uint64_t, bounds->result_stack_size);
 
-	bd->bouncer_center =
-		ALLOC_ARRAY(point2d_t, bd->bouncer_center_size);
+	bounds->bouncer_center =
+		ALLOC_ARRAY(point2d_t, bounds->bouncer_center_size);
 
-	for (int idx = 0, k, h = px - 1; h > 0; h--) {
+	for (int idx = 0, k, height = pos_x - 1; height > 0; height--) {
 		k = 1;
-		if ((h & 1) != 0) { // odd
-			bd->bouncer_center[idx++] =
-				get_position_base(0, h, Hc, Wc);
+		if ((height & 1) != 0) { // odd
+			bounds->bouncer_center[idx++] =
+				get_position_base(0, (uint16_t)height, H_c, W_c);
 			k = 2;
 		}
-		while (k < h) {
-			bd->bouncer_center[idx++] =
-				get_position_base(k, h, Hc, Wc);
-			bd->bouncer_center[idx++] =
-				get_position_base(-k, h, Hc, Wc);
+		while (k < height) {
+			bounds->bouncer_center[idx++] = get_position_base(
+				(int16_t)k, (uint16_t)height, H_c, W_c);
+			bounds->bouncer_center[idx++] = get_position_base(
+				(int16_t)-k, (uint16_t)height, H_c, W_c);
 			k += 2;
 		}
 	}
 
-	return bd;
+	return bounds;
 }
 
 error_t galton_board__free(galton_board_t *board) {
-	if (board == 0)
+	if (board == 0) {
 		return 1;
+	}
 	free(board->bouncer_center);
 	free(board->particles);
 	free(board->result_stack);
@@ -127,8 +131,9 @@ error_t galton_board__free(galton_board_t *board) {
 }
 
 error_t galton_board__reset_count(galton_board_t *board) {
-	if (board == 0)
+	if (board == 0) {
 		return 1;
+	}
 	for (int i = 0; i < board->result_stack_size; i++) {
 		board->result_stack[i] = 0;
 	}
@@ -137,10 +142,12 @@ error_t galton_board__reset_count(galton_board_t *board) {
 }
 
 error_t galton_board__add(galton_board_t *board) {
-	if (board == 0)
+	if (board == 0) {
 		return 2;
-	else if (board->active_particles == board->max_particles)
+	}
+	if (board->active_particles == board->max_particles) {
 		return 1;
+	}
 	board->particles[board->active_particles] = (galton_particle_t){
 		.progress = galton_constants.particle_process_limit,
 		.prev_dir = 0,
@@ -157,29 +164,33 @@ error_t galton_board__update(galton_board_t *board) {
 	}
 	int idx = 0;
 	while (idx < board->active_particles) {
-		galton_particle_t *p = board->particles + idx;
-		p->progress -= galton_constants.particle_speed;
-		if (p->progress > 0) {
+		galton_particle_t *pnt = board->particles + idx;
+		pnt->progress = (int16_t)(pnt->progress -
+								  galton_constants.particle_speed);
+		if (pnt->progress > 0) {
 			idx++;
-		} else if (p->height == board->result_stack_size) {
-			int slot_bin = p->slot;
+		} else if (pnt->height == board->result_stack_size) {
+			int slot_bin = pnt->slot;
 			slot_bin = slot_bin + board->result_stack_size - 1;
-			if ((slot_bin & 1) == 1)
+			if ((slot_bin & 1) == 1) {
 				return 4;
+			}
 			slot_bin = slot_bin / 2;
-			if (slot_bin < 0)
-				return 5;
-			else if (slot_bin >= board->result_stack_size)
-				return 6;
+			if (slot_bin < 0) {
+				return 3;
+			}
+			if (slot_bin >= board->result_stack_size) {
+				return 2;
+			}
 			board->result_stack[slot_bin]++;
 			board->active_particles--;
 			board->particles[idx] =
 				board->particles[board->active_particles];
 		} else {
-			p->height++;
-			p->progress = galton_constants.particle_process_limit;
-			p->prev_dir = ((rand()) & 1) == 1 ? 1 : -1;
-			p->slot = p->slot + p->prev_dir;
+			pnt->height++;
+			pnt->progress = galton_constants.particle_process_limit;
+			pnt->prev_dir = ((rand()) & 1) == 1 ? 1 : -1;
+			pnt->slot = (int16_t)(pnt->slot + pnt->prev_dir);
 			idx++;
 		}
 	}
