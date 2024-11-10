@@ -21,7 +21,9 @@ point2d_t get_position_base(
 	const uint16_t depth,
 	const uint16_t C_h,
 	const uint16_t C_w) {
-	return (point2d_t){.x = (slot * C_w) >> 1, .y = depth * C_h};
+	return (point2d_t){
+		.x = (int16_t)((slot * C_w) >> 1),
+		.y = (int16_t)(depth * C_h)};
 }
 
 /**
@@ -51,21 +53,21 @@ error_t get_position(
 	const int8_t prev_dir,
 	float progress) {
 	if (progress < 0 || progress > 1) {
-		return 5;
+		return 1;
 	}
 	point2d_t base = get_position_base(slot, depth, C_h, C_w);
-	*y_f += base.y;
-	*x_f += base.x;
-	*y_f -= progress * C_h;
-	*x_f -= prev_dir * progress * progress * C_w / 2;
+	*y_f += (float)base.y;
+	*x_f += (float)base.x;
+	*y_f -= progress * (float)C_h;
+	*x_f -= (float)prev_dir * progress * progress * (float)C_w / 2;
 	return 0;
 }
 
 galton_board_t *galton_board__init(
 	const uint8_t bounce_pairs,
 	const uint8_t max_particles,
-	const uint8_t Hc,
-	const uint8_t Wc) {
+	const uint8_t H_c,
+	const uint8_t W_c) {
 	if (bounce_pairs > galton_constants.max_bouncer_pairs) {
 		return 0;
 	}
@@ -198,45 +200,54 @@ error_t galton_board__update(galton_board_t *board) {
 }
 
 error_t galton_board__plot_ball(
-	const galton_board_t *board, uint8_t idx, float *x, float *y) {
+	const galton_board_t *board,
+	uint8_t idx,
+	float *ball_x,
+	float *ball_y) {
 
 	if (board == 0) {
 		return 2;
-	} else if (idx >= board->active_particles) {
+	}
+	if (idx >= board->active_particles) {
 		return 1;
 	}
 
-	galton_particle_t *pt = &board->particles[idx];
-	float dp = pt->progress / (float)board->particle_dist_limit;
+	galton_particle_t *point = &board->particles[idx];
+	float delta =
+		(float)point->progress / (float)board->particle_dist_limit;
 
 	return get_position(
-		x,
-		y,
-		pt->slot,
-		pt->height,
+		ball_x,
+		ball_y,
+		point->slot,
+		point->height,
 		board->Ch,
 		board->Cw,
-		pt->prev_dir,
-		dp);
+		point->prev_dir,
+		delta);
 
 	return 0;
 }
 
 error_t galton_board__plot_result_stack(
-	const galton_board_t *board, int16_t idx, float *x, float *y) {
+	const galton_board_t *board,
+	int16_t idx,
+	float *p_x,
+	float *p_y) {
 
 	if (board == 0) {
 		return 2;
-	} else if (idx >= board->result_stack_size) {
+	}
+	if (idx >= board->result_stack_size) {
 		return 1;
 	}
 
-	point2d_t pt = get_position_base(
-		1 + (idx * 2) - board->result_stack_size,
+	point2d_t point = get_position_base(
+		(int16_t)(1 + (idx * 2) - board->result_stack_size),
 		board->result_stack_size,
 		board->Ch,
 		board->Cw);
-	*x += pt.x;
-	*y += pt.y;
+	*p_x += (float)point.x;
+	*p_y += (float)point.y;
 	return 0;
 }
