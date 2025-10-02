@@ -21,9 +21,8 @@ point2d_t get_position_base(
 	const uint16_t depth,
 	const uint16_t C_h,
 	const uint16_t C_w) {
-	return (point2d_t){
-		.x = (int16_t)((slot * C_w) >> 1),
-		.y = (int16_t)(depth * C_h)};
+	return (point2d_t){.x = (int16_t)((slot * C_w) >> 1),
+					   .y = (int16_t)(depth * C_h)};
 }
 
 /**
@@ -83,10 +82,10 @@ galton_board_t *galton_board__init(
 	bounds->active_particles = 0;
 
 	ASSIGN_CONST(bounds->max_particles, uint8_t, max_particles);
-	uint16_t pos_x = 1 + (2 * bounce_pairs);
+	uint16_t pos_x = (uint16_t)(1 + (2 * bounce_pairs));
 	ASSIGN_CONST(bounds->result_stack_size, uint16_t, pos_x);
 	ASSIGN_CONST(
-		bounds->bouncer_center_size, uint16_t, pos_x * bounce_pairs);
+		bounds->bouncer_center_size, uint16_t, pos_x *bounce_pairs);
 	ASSIGN_CONST(bounds->Ch, uint8_t, H_c);
 	ASSIGN_CONST(bounds->Cw, uint8_t, W_c);
 	ASSIGN_CONST(

@@ -90,13 +90,6 @@ endif()
 
 target_link_libraries(accion_exe PRIVATE "${RAYLIB_SHARED_DIR}/${RAYLIB_SHARED_LIB}")
 
-# Copies assets folder to the build directory
-add_custom_command(TARGET accion_exe PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${PROJECT_SOURCE_DIR}/assets"
-        $<TARGET_FILE_DIR:accion_exe>/assets)
-
-
 # Copy shared lib to the build directory
 add_custom_command(
     TARGET accion_exe PRE_BUILD

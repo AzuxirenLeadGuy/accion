@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 const uint8_t cmax = 255;
 
@@ -87,7 +88,8 @@ int main(void) {
 	uint32_t batch_remaining = ball_batch_size;
 	uint32_t max_this_instance;
 
-	char remain_text[cmax / 2];
+	char* remain_text = malloc(cmax / 2);
+	// char remain_text[cmax / 2];
 
 	while (!WindowShouldClose()) {
 
@@ -209,6 +211,7 @@ int main(void) {
 		EndDrawing();
 		cycle_color(&back_color);
 	}
+	free(remain_text);
 	return_error += galton_board__free(board);
 	printf("Returned with error %d\n\n", return_error);
 	return return_error;
