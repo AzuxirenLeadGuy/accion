@@ -37,8 +37,8 @@ jobs:
         # Optional: Keep the artifacts for a set number of days
         retention-days: 7
   linux-build-task:
-    name: Windows MSVC build
-    runs-on: windows-latest
+    name: Linux GCC build
+    runs-on: ubuntu-latest
     steps:
     - name: Fetch Sources
       uses: actions/checkout@v5.0.0
