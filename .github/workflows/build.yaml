@@ -1,0 +1,64 @@
+name: Continuous Integration and Deployment
+
+on:
+  push:
+    # Pattern matched against refs/tags
+    tags:        
+      - '*' # Push events to every tag not containing /
+
+jobs:
+  win-build-task:
+    name: Windows MSVC build
+    runs-on: windows-latest
+    steps:
+    - name: Fetch Sources
+      uses: actions/checkout@v5.0.0
+      with:
+        submodules: true
+    - name: Setup Python
+      uses: actions/setup-python@v6.0.0
+      with:
+        python-version: '3.12'
+    - name: Install Python Dependencies
+      run: pip install meson ninja
+    - name: Prepare MSVC
+      uses: bus1/cabuild/action/msdevshell@v1
+      with:
+        architecture: x64
+    - name: Prepare Build
+      run: meson setup build --buildtype=release
+    - name: Run Build
+      run: meson install -C build --destdir ./artifact
+    - name: upload Build Artifacts as Releases
+      uses: actions/upload-artifact@v4
+      with:
+        name: msvc-build
+        path: ${{ github.workspace }}/build/artifact/
+        # Optional: Keep the artifacts for a set number of days
+        retention-days: 7
+  linux-build-task:
+    name: Windows MSVC build
+    runs-on: windows-latest
+    steps:
+    - name: Fetch Sources
+      uses: actions/checkout@v5.0.0
+      with:
+        submodules: true
+    - name: Setup Python
+      uses: actions/setup-python@v6.0.0
+      with:
+        python-version: '3.12'
+    - name: Install Python Dependencies
+      run: pip install meson ninja
+    - name: Prepare Build
+      run: meson setup build --buildtype=release
+    - name: Run Build
+      run: meson install -C build --destdir ./artifact
+    - name: upload Build Artifacts as Releases
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-build
+        path: ${{ github.workspace }}/build/artifact/
+        # Optional: Keep the artifacts for a set number of days
+        retention-days: 7
+  

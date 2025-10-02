@@ -46,7 +46,141 @@ void cycle_color(Color *color_p) {
 	*color_p = color_v;
 }
 
-int main(void) {
+int draw_board(
+	const point2d_t particle_spawn_point,
+	const uint32_t max_this_instance,
+	const point2d_t funnel_origin,
+	char *remain_text,
+	const uint8_t unit,
+	const Color back_color,
+	const int state,
+	const galton_board_t *board) {
+
+	// Draw title
+	DrawText("Galton Board", 0, 0, unit, back_color);
+	DrawText(remain_text, funnel_origin.x + unit, 0, unit / 2, BLACK);
+
+	int idx;
+	int return_error;
+	// Draw funnel
+	Vector2 point_v = {funnel_origin.x, funnel_origin.y};
+	const float right_angle = 90;
+	const float halver = 0.5F;
+	DrawPoly(point_v, 3, (float)unit * halver, right_angle, WHITE);
+
+	// Draw particles
+	for (idx = 0; idx < board->active_particles; idx++) {
+		Vector2 point_u =
+			(Vector2){particle_spawn_point.x, particle_spawn_point.y};
+		return_error = galton_board__plot_ball(
+			board, (uint8_t)idx, &point_u.x, &point_u.y);
+		if (return_error != 0) {
+			CloseWindow();
+			return return_error;
+		}
+
+		DrawCircle(
+			(int)point_u.x,
+			(int)point_u.y,
+			(float)unit * halver * halver,
+			RED);
+	}
+
+	// Draw each bouncer
+	float unit_bc = (float)unit * halver * halver;
+	for (idx = 0; idx < board->bouncer_center_size; idx++) {
+		point_v.x = (float)particle_spawn_point.x +
+					(float)board->bouncer_center[idx].x;
+		point_v.y = (float)particle_spawn_point.y +
+					(float)board->bouncer_center[idx].y + unit_bc / 2;
+		DrawPoly(point_v, 3, unit_bc, -right_angle, BLACK);
+	}
+
+	for (idx = 0; idx < board->result_stack_size; idx++) {
+		Vector2 point_v =
+			(Vector2){particle_spawn_point.x, particle_spawn_point.y};
+		return_error = galton_board__plot_result_stack(
+			board, (int16_t)idx, &point_v.x, &point_v.y);
+		float bar_length = (float)board->result_stack[idx];
+		float width = (float)unit * halver;
+		bar_length /= (float)max_this_instance;
+		bar_length *=
+			(float)galton_constants.screen_height - point_v.y;
+		point_v.x -= width / 2;
+		DrawRectangleV(
+			point_v, (Vector2){.x = width, .y = bar_length}, GREEN);
+
+		if (state != 0) {
+			sprintf(remain_text, "%lu", board->result_stack[idx]);
+			DrawText(
+				remain_text,
+				(int)point_v.x,
+				(int)point_v.y,
+				(int)(unit / 2),
+				(Color){cmax / 2, 0, 1 << (3 + 3), cmax});
+		}
+	}
+	return return_error;
+}
+
+int update_board(
+	galton_board_t *board,
+	float *current_timer,
+	uint8_t *state,
+	const float reset_timer_value,
+	uint32_t *batch_remaining,
+	const uint16_t ball_batch_size,
+	char *remain_text,
+	uint32_t *max_this_instance) {
+
+	uint32_t idx;
+
+	// Turn timer and spawn a new particle (if not exceeded
+	// MAX_GALTON_PARTICLES)
+
+	*current_timer -= GetFrameTime();
+	if (*state == 0) { // batch_remaining > 0
+		if (*current_timer <= 0) {
+			if (galton_board__add(board) != 0) {
+				*current_timer = 0;
+			} else {
+				(*batch_remaining)--;
+				*current_timer = reset_timer_value;
+				if (*batch_remaining == 0) {
+					*state = 1;
+				}
+			}
+		}
+	} else if (*state == 1) {
+		if (board->active_particles == 0) {
+			*current_timer = reset_timer_value * 4 + 4;
+			*state = 2;
+		}
+
+	} else if (*state >= 2 && *current_timer <= 0) {
+		*state = 0;
+		galton_board__reset_count(board);
+		*current_timer = reset_timer_value;
+		*batch_remaining = ball_batch_size;
+	}
+
+	// Update particles
+	int return_error = galton_board__update(board);
+	if (return_error != 0) {
+		CloseWindow();
+		return return_error;
+	}
+	*max_this_instance = 0;
+	for (idx = 0; idx < board->result_stack_size; idx++) {
+		if (board->result_stack[idx] > *max_this_instance) {
+			*max_this_instance = (uint32_t)(board->result_stack[idx]);
+		}
+	}
+	sprintf(remain_text, "Remaining: %d", *batch_remaining);
+	return return_error;
+}
+
+int main(int argc, char **argv) {
 
 	const uint8_t unit = 48;
 	galton_board_t *board =
@@ -58,7 +192,7 @@ int main(void) {
 
 	uint8_t state = 0;
 
-	int return_error;
+	int return_error = 0;
 
 	InitWindow(
 		galton_constants.screen_width,
@@ -84,130 +218,36 @@ int main(void) {
 
 	const uint16_t ball_batch_size =
 		(uint16_t)(1 << galton_constants.particle_batch_size_2_power);
-	uint32_t idx;
 	uint32_t batch_remaining = ball_batch_size;
 	uint32_t max_this_instance;
 
-	char* remain_text = malloc(cmax / 2);
+	char *remain_text = malloc(cmax / 2);
 	// char remain_text[cmax / 2];
 
-	while (!WindowShouldClose()) {
-
-		// Turn timer and spawn a new particle (if not exceeded
-		// MAX_GALTON_PARTICLES)
-
-		current_timer -= GetFrameTime();
-		if (state == 0) { // batch_remaining > 0
-			if (current_timer <= 0) {
-				if (galton_board__add(board) != 0) {
-					current_timer = 0;
-				} else {
-					batch_remaining--;
-					current_timer = reset_timer_value;
-					if (batch_remaining == 0) {
-						state = 1;
-					}
-				}
-			}
-		} else if (state == 1) {
-			// batch_remaining == 0, active_particles > 0
-			if (board->active_particles == 0) {
-				current_timer = reset_timer_value * 4 + 4;
-				state = 2;
-			}
-
-		} else if (state >= 2 && current_timer <= 0) {
-			state = 0;
-			galton_board__reset_count(board);
-			current_timer = reset_timer_value;
-			batch_remaining = ball_batch_size;
-		}
-
-		// Update particles
-		return_error = galton_board__update(board);
+	while (!WindowShouldClose() && return_error == 0) {
+		return_error = update_board(
+			board,
+			&current_timer,
+			&state,
+			reset_timer_value,
+			&batch_remaining,
+			ball_batch_size,
+			remain_text,
+			&max_this_instance);
 		if (return_error != 0) {
-			CloseWindow();
 			break;
 		}
-		max_this_instance = 0;
-		for (idx = 0; idx < board->result_stack_size; idx++) {
-			if (board->result_stack[idx] > max_this_instance) {
-				max_this_instance =
-					(uint32_t)(board->result_stack[idx]);
-			}
-		}
-		sprintf(remain_text, "Remaining: %d", batch_remaining);
 		ClearBackground((Color){cmax, cmax, cmax, cmax});
 		BeginDrawing();
-
-		// Draw title
-		DrawText("Galton Board", 0, 0, unit, back_color);
-		DrawText(
-			remain_text, funnel_origin.x + unit, 0, unit / 2, BLACK);
-
-		// Draw funnel
-		Vector2 point_v = {funnel_origin.x, funnel_origin.y};
-		const float right_angle = 90;
-		const float halver = 0.5F;
-		DrawPoly(
-			point_v, 3, (float)unit * halver, right_angle, WHITE);
-
-		// Draw particles
-		for (idx = 0; idx < board->active_particles; idx++) {
-			Vector2 point_u = (Vector2){
-				particle_spawn_point.x, particle_spawn_point.y};
-			return_error = galton_board__plot_ball(
-				board, (uint8_t)idx, &point_u.x, &point_u.y);
-			if (return_error != 0) {
-				CloseWindow();
-				break;
-			}
-
-			DrawCircle(
-				(int)point_u.x,
-				(int)point_u.y,
-				(float)unit * halver * halver,
-				RED);
-		}
-
-		// Draw each bouncer
-		float unit_bc = (float)unit * halver * halver;
-		for (idx = 0; idx < board->bouncer_center_size; idx++) {
-			point_v.x = (float)particle_spawn_point.x +
-						(float)board->bouncer_center[idx].x;
-			point_v.y = (float)particle_spawn_point.y +
-						(float)board->bouncer_center[idx].y +
-						unit_bc / 2;
-			DrawPoly(point_v, 3, unit_bc, -right_angle, BLACK);
-		}
-
-		for (idx = 0; idx < board->result_stack_size; idx++) {
-			Vector2 point_v = (Vector2){
-				particle_spawn_point.x, particle_spawn_point.y};
-			return_error = galton_board__plot_result_stack(
-				board, (int16_t)idx, &point_v.x, &point_v.y);
-			float bar_length = (float)board->result_stack[idx];
-			float width = (float)unit * halver;
-			bar_length /= (float)max_this_instance;
-			bar_length *=
-				(float)galton_constants.screen_height - point_v.y;
-			point_v.x -= width / 2;
-			DrawRectangleV(
-				point_v,
-				(Vector2){.x = width, .y = bar_length},
-				GREEN);
-
-			if (state != 0) {
-				sprintf(remain_text, "%lu", board->result_stack[idx]);
-				DrawText(
-					remain_text,
-					(int)point_v.x,
-					(int)point_v.y,
-					(int)(unit / 2),
-					(Color){cmax / 2, 0, 1 << (3 + 3), cmax});
-			}
-		}
-
+		return_error = draw_board(
+			particle_spawn_point,
+			max_this_instance,
+			funnel_origin,
+			remain_text,
+			unit,
+			back_color,
+			state,
+			board);
 		EndDrawing();
 		cycle_color(&back_color);
 	}
