@@ -1,9 +1,6 @@
 project(
     'accion',
     'c',
-    default_options: {
-        'std_c': 'gnu23',
-    },
 )
 
 cmake = import('cmake')
@@ -19,4 +16,5 @@ executable(
         'src/galton_board.c',
     ],
     dependencies: raylib_proj.dependency('raylib'),
+    install: true,
 )
