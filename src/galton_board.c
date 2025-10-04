@@ -3,26 +3,31 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define ALLOC_ARRAY(T, count) (T *)calloc(count, sizeof(T))
-#define ASSIGN_CONST(var, T, val) *(T *)(&var) = val
+#define ALLOC_ARRAY(T, count) (T*)calloc(count, sizeof(T))
+#define ASSIGN_CONST(var, T, val) *(T*)(&var) = val
 
 const struct galton_constants galton_constants = {
 	.max_particles_limit = 255,
 	.max_bouncer_pairs = 11,
 	.particle_speed = 16,
-	.screen_width = 1200,
-	.screen_height = 900,
+	.screen_width = 1280,
+	.screen_height = 720,
 	.particle_spawn_milliseconds = 300,
 	.particle_process_limit = 0xff,
-	.particle_batch_size_2_power = 8};
+	.particle_batch_size_2_power = 8
+};
 
 point2d_t get_position_base(
 	const int16_t slot,
 	const uint16_t depth,
 	const uint16_t C_h,
-	const uint16_t C_w) {
-	return (point2d_t){.x = (int16_t)((slot * C_w) >> 1),
-					   .y = (int16_t)(depth * C_h)};
+	const uint16_t C_w
+)
+{
+	return (point2d_t) {
+		.x = (int16_t)((slot * C_w) >> 1),
+		.y = (int16_t)(depth * C_h)
+	};
 }
 
 /**
@@ -43,14 +48,16 @@ point2d_t get_position_base(
  * positive value is returned.
  */
 error_t get_position(
-	float *x_f,
-	float *y_f,
+	float* x_f,
+	float* y_f,
 	const int16_t slot,
 	const uint16_t depth,
 	const uint16_t C_h,
 	const uint16_t C_w,
 	const int8_t prev_dir,
-	float progress) {
+	float progress
+)
+{
 	if (progress < 0 || progress > 1) {
 		return 1;
 	}
@@ -62,11 +69,13 @@ error_t get_position(
 	return 0;
 }
 
-galton_board_t *galton_board__init(
+galton_board_t* galton_board__init(
 	const uint8_t bounce_pairs,
 	const uint8_t max_particles,
 	const uint8_t H_c,
-	const uint8_t W_c) {
+	const uint8_t W_c
+)
+{
 	if (bounce_pairs > galton_constants.max_bouncer_pairs) {
 		return 0;
 	}
@@ -77,42 +86,42 @@ galton_board_t *galton_board__init(
 		return 0;
 	}
 	srand((uint32_t)time(0));
-	galton_board_t *bounds =
-		(galton_board_t *)malloc(sizeof(galton_board_t));
+	galton_board_t* bounds = (galton_board_t*)malloc(sizeof(galton_board_t));
 	bounds->active_particles = 0;
 
 	ASSIGN_CONST(bounds->max_particles, uint8_t, max_particles);
 	uint16_t pos_x = (uint16_t)(1 + (2 * bounce_pairs));
 	ASSIGN_CONST(bounds->result_stack_size, uint16_t, pos_x);
 	ASSIGN_CONST(
-		bounds->bouncer_center_size, uint16_t, pos_x *bounce_pairs);
+		bounds->bouncer_center_size, uint16_t, pos_x* bounce_pairs
+	);
 	ASSIGN_CONST(bounds->Ch, uint8_t, H_c);
 	ASSIGN_CONST(bounds->Cw, uint8_t, W_c);
 	ASSIGN_CONST(
 		bounds->particle_dist_limit,
 		uint16_t,
-		galton_constants.particle_process_limit);
+		galton_constants.particle_process_limit
+	);
 
 	bounds->particles = ALLOC_ARRAY(galton_particle_t, max_particles);
 
-	bounds->result_stack =
-		ALLOC_ARRAY(uint64_t, bounds->result_stack_size);
+	bounds->result_stack = ALLOC_ARRAY(uint64_t, bounds->result_stack_size);
 
-	bounds->bouncer_center =
-		ALLOC_ARRAY(point2d_t, bounds->bouncer_center_size);
+	bounds->bouncer_center = ALLOC_ARRAY(point2d_t, bounds->bouncer_center_size);
 
 	for (int idx = 0, k, height = pos_x - 1; height > 0; height--) {
 		k = 1;
 		if ((height & 1) != 0) { // odd
-			bounds->bouncer_center[idx++] =
-				get_position_base(0, (uint16_t)height, H_c, W_c);
+			bounds->bouncer_center[idx++] = get_position_base(0, (uint16_t)height, H_c, W_c);
 			k = 2;
 		}
 		while (k < height) {
 			bounds->bouncer_center[idx++] = get_position_base(
-				(int16_t)k, (uint16_t)height, H_c, W_c);
+				(int16_t)k, (uint16_t)height, H_c, W_c
+			);
 			bounds->bouncer_center[idx++] = get_position_base(
-				(int16_t)-k, (uint16_t)height, H_c, W_c);
+				(int16_t)-k, (uint16_t)height, H_c, W_c
+			);
 			k += 2;
 		}
 	}
@@ -120,7 +129,8 @@ galton_board_t *galton_board__init(
 	return bounds;
 }
 
-error_t galton_board__free(galton_board_t *board) {
+error_t galton_board__free(galton_board_t* board)
+{
 	if (board == 0) {
 		return 1;
 	}
@@ -131,7 +141,8 @@ error_t galton_board__free(galton_board_t *board) {
 	return 0;
 }
 
-error_t galton_board__reset_count(galton_board_t *board) {
+error_t galton_board__reset_count(galton_board_t* board)
+{
 	if (board == 0) {
 		return 1;
 	}
@@ -142,14 +153,15 @@ error_t galton_board__reset_count(galton_board_t *board) {
 	return 0;
 }
 
-error_t galton_board__add(galton_board_t *board) {
+error_t galton_board__add(galton_board_t* board)
+{
 	if (board == 0) {
 		return 2;
 	}
 	if (board->active_particles == board->max_particles) {
 		return 1;
 	}
-	board->particles[board->active_particles] = (galton_particle_t){
+	board->particles[board->active_particles] = (galton_particle_t) {
 		.progress = galton_constants.particle_process_limit,
 		.prev_dir = 0,
 		.height = 1,
@@ -159,15 +171,15 @@ error_t galton_board__add(galton_board_t *board) {
 	return 0;
 }
 
-error_t galton_board__update(galton_board_t *board) {
+error_t galton_board__update(galton_board_t* board)
+{
 	if (board == 0) {
 		return 2;
 	}
 	int idx = 0;
 	while (idx < board->active_particles) {
-		galton_particle_t *pnt = board->particles + idx;
-		pnt->progress = (int16_t)(pnt->progress -
-								  galton_constants.particle_speed);
+		galton_particle_t* pnt = board->particles + idx;
+		pnt->progress = (int16_t)(pnt->progress - galton_constants.particle_speed);
 		if (pnt->progress > 0) {
 			idx++;
 		} else if (pnt->height == board->result_stack_size) {
@@ -185,8 +197,7 @@ error_t galton_board__update(galton_board_t *board) {
 			}
 			board->result_stack[slot_bin]++;
 			board->active_particles--;
-			board->particles[idx] =
-				board->particles[board->active_particles];
+			board->particles[idx] = board->particles[board->active_particles];
 		} else {
 			pnt->height++;
 			pnt->progress = galton_constants.particle_process_limit;
@@ -199,10 +210,12 @@ error_t galton_board__update(galton_board_t *board) {
 }
 
 error_t galton_board__plot_ball(
-	const galton_board_t *board,
+	const galton_board_t* board,
 	uint8_t idx,
-	float *ball_x,
-	float *ball_y) {
+	float* ball_x,
+	float* ball_y
+)
+{
 
 	if (board == 0) {
 		return 2;
@@ -211,9 +224,8 @@ error_t galton_board__plot_ball(
 		return 1;
 	}
 
-	galton_particle_t *point = &board->particles[idx];
-	float delta =
-		(float)point->progress / (float)board->particle_dist_limit;
+	galton_particle_t* point = &board->particles[idx];
+	float delta = (float)point->progress / (float)board->particle_dist_limit;
 
 	return get_position(
 		ball_x,
@@ -223,16 +235,19 @@ error_t galton_board__plot_ball(
 		board->Ch,
 		board->Cw,
 		point->prev_dir,
-		delta);
+		delta
+	);
 
 	return 0;
 }
 
 error_t galton_board__plot_result_stack(
-	const galton_board_t *board,
+	const galton_board_t* board,
 	int16_t idx,
-	float *p_x,
-	float *p_y) {
+	float* p_x,
+	float* p_y
+)
+{
 
 	if (board == 0) {
 		return 2;
@@ -245,7 +260,8 @@ error_t galton_board__plot_result_stack(
 		(int16_t)(1 + (idx * 2) - board->result_stack_size),
 		board->result_stack_size,
 		board->Ch,
-		board->Cw);
+		board->Cw
+	);
 	*p_x += (float)point.x;
 	*p_y += (float)point.y;
 	return 0;
